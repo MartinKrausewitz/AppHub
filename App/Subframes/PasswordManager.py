@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import simpledialog
+
 from App.Main import stdframe as st
 from App.Utility import EncryptDecrypt as ED
+from App.Utility import tkinterDisplayKeys as dk
 import os
 import json
 
@@ -19,6 +21,7 @@ class PasswordManagerFrame(st.stdFrame):
         self.data = ""
         self.labellist = []
         self.buttonlistdisplay = []
+        self.buttonlistremove = []
         self.topbutton = []
 
     @staticmethod
@@ -79,11 +82,14 @@ class PasswordManagerFrame(st.stdFrame):
         for i in range(1,firstfree):
             self.labellist.append(ttk.Label(self, text=self.data[str(i)]["name"]))
             self.labellist[i - 1].grid(row=i, column=0)
-            self.buttonlistdisplay.append(ttk.Button(self, text="Display", command=lambda:self.displayitem(i)))
+            self.buttonlistdisplay.append(ttk.Button(self, text="Display", command=lambda c=i:self.displayitem(c)))
             self.buttonlistdisplay[i - 1].grid(row=i, column=1)
+            self.buttonlistremove.append(ttk.Button(self, text="Remove", command=lambda c=i:self.removeentry(c)))
+            self.buttonlistremove[i - 1].grid(row=i, column=2)
 
     def displayitem(self, id):
-        print(self.data[str(id)])
+        window = dk.keyDisplay(self, self.data[str(id)])
+        window.grab_set()
 
     def add(self):
         firstfree = self.data["counter"]
@@ -97,12 +103,33 @@ class PasswordManagerFrame(st.stdFrame):
             key = simpledialog.askstring("Schlüsselwort", "Geben sie ein Schlüsselwort ein:")
             if key is None:
                 break
-            keyvalue = simpledialog.askstring("Schlüsselwortwer", "Geben sie ein Wert ein, der ihrem Schlüsselwort zugeordent wird:")
+            keyvalue = simpledialog.askstring("Schlüsselwortwert", "Geben sie ein Wert ein, der ihrem Schlüsselwort zugeordent wird:")
             if key is None:
                 continue
             entry[key] = keyvalue
         self.data[firstfree] = entry
         self.data['counter'] = str(int(firstfree)+1)
+        self.encdicandsave()
+        self.update()
+
+    def encdicandsave(self):
         d = self.enc.encryptDict(self.data)
         self.enc.writeFile("maintable", d[0], d[1], d[2])
+
+    def removeentry(self, id):
+        self.data.pop(str(id))
+        for i in range(id, int(self.data["counter"]) - 1):
+            self.data[str(i)] = self.data[str(i + 1)]
+            self.data.pop(str(id + 1))
+
+        self.data["counter"] = str(int(self.data["counter"]) - 1)
+        self.encdicandsave()
+        self.update()
+
+    def update(self):
+        for i in range(0, len(self.buttonlistdisplay)):
+            self.buttonlistdisplay[i].destroy()
+            self.buttonlistremove[i].destroy()
+            self.labellist[i].destroy()
+        self.displaypwd()
 
