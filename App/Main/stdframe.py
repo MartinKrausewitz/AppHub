@@ -5,7 +5,13 @@ from tkinter import ttk
 class stdFrame(ttk.Frame):
     def __init__(self, container):
         super().__init__(container)
-        self.pack()
+        self.grid(row=0, column=0)
+
+        width = self.winfo_screenwidth()
+        heigth = self.winfo_screenheight()
+        sizex = 300
+        sizey = 300
+        self.newgeometry = str(sizex) + "x" + str(sizey) + "+" + str(int(width/2) - int(sizex/2)) + "+" + str(int(heigth/2) - int(sizey/2))
 
     @staticmethod
     def returntitle():
