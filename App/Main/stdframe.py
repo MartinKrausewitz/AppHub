@@ -23,3 +23,6 @@ class stdFrame(ttk.Frame):
     def initdisplay(self):
         self.label = ttk.Label(self, text="This is the standard Frame")
         self.label.pack()
+
+    def getsettingdic(self):
+        return dict()

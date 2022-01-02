@@ -10,13 +10,17 @@ import json
 
 # todo implement language
 # todo add backup
+# todo setting window
 
 class PasswordManagerFrame(st.stdFrame):
     def __init__(self, container):
         super().__init__(container)
         # get app path
         pwddir = os.path.abspath(os.path.join(os.path.dirname("AppHub"), ".."))
+        print(pwddir)
         pwddir = os.path.join(pwddir, "data")
+        pwddir = os.path.join(pwddir, "pwmanager")
+        self.datadir = pwddir
         # look if maintable file exists
         self.initialized = True
         if not os.path.exists(os.path.join(pwddir, "maintable")):
@@ -88,10 +92,9 @@ class PasswordManagerFrame(st.stdFrame):
             self.initprocess()
             return
         self.enc.setNewKey(p1)
-        begintable = dict()
-        begintable["counter"] = "1"
-        retval = self.enc.encryptDict(begintable)
-        self.enc.writeFile("maintable", retval[0], retval[1], retval[2])
+        self.data = dict()
+        self.data["counter"] = "1"
+        self.encdicandsave()
         self.initialized = True
 
     # setting up the top buttons
@@ -163,10 +166,16 @@ class PasswordManagerFrame(st.stdFrame):
         self.framearray = []
         self.displaypwd()
 
+    # returns the setiingsdict saved as blueprint
+    def getsettingdic(self):
+        with open(os.path.join(self.datadir, "settingsblueprint"), "r") as f:
+            return json.loads(f.read())
+
+
 class subframe(ttk.Frame):
     def __init__(self, data, i, sup, width):
         super().__init__(sup, style=str(i%2)+".TFrame")
-        t1 = (int(0.2*width),int(0.2*width))      # padding of Label (right, left)
+        t1 = (int(0.1*width),int(0.3*width))      # padding of Label (right, left)
         t2 = (int(0.05*width),int(0.05*width))    # padding of Button (right, left)
         stylelable = str(i%2)+".TLabel"     # 0.TLabel|1.TLabel
         stylebutton = str(i%2)+".TButton"   # 0.TButton|1.TButton
