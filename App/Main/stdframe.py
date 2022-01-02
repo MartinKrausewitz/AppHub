@@ -26,3 +26,5 @@ class stdFrame(ttk.Frame):
 
     def getsettingdic(self):
         return dict()
+    def getstdsettingdic(self):
+        return dict()

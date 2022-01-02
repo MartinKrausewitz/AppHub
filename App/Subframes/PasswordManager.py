@@ -171,6 +171,11 @@ class PasswordManagerFrame(st.stdFrame):
         with open(os.path.join(self.datadir, "settingsblueprint"), "r") as f:
             return json.loads(f.read())
 
+    # returns the setiingsdict saved as blueprint
+    def getstdsettingdic(self):
+        with open(os.path.join(self.datadir, "stdsettings"), "r") as f:
+           return json.loads(f.read())
+
 
 class subframe(ttk.Frame):
     def __init__(self, data, i, sup, width):
