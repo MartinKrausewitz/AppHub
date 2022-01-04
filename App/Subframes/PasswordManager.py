@@ -168,13 +168,19 @@ class PasswordManagerFrame(st.stdFrame):
 
     # returns the setiingsdict saved as blueprint
     def getsettingdic(self):
-        with open(os.path.join(self.datadir, "settingsblueprint"), "r") as f:
+        with open(os.path.join(self.datadir, "settingsblueprint.set"), "r") as f:
             return json.loads(f.read())
 
     # returns the setiingsdict saved as blueprint
-    def getstdsettingdic(self):
-        with open(os.path.join(self.datadir, "stdsettings"), "r") as f:
-           return json.loads(f.read())
+    def getcurrentsettingdic(self):
+        if os.path.exists(os.path.join(self.datadir, "settings.set")):
+            with open(os.path.join(self.datadir, "settings.set"), "r") as f:
+                return json.loads(f.read())
+        with open(os.path.join(self.datadir, "stdsettings.set"), "r") as f:
+            return json.loads(f.read())
+
+    def getsettingspath(self):
+        return os.path.join(self.datadir, "settings.set")
 
 
 class subframe(ttk.Frame):

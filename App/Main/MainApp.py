@@ -55,7 +55,6 @@ class MainApp(tk.Tk):
         if self.mainframe is None:
             return
         d = self.mainframe.getsettingdic()
-        std = self.mainframe.getstdsettingdic()
-        print(d)
-        print(std)
-        settingwindow = sett.SettingWindow(self, d, std)
+        std = self.mainframe.getcurrentsettingdic()
+        s = self.mainframe.getsettingspath()
+        settingwindow = sett.SettingWindow(self, d, std, s)

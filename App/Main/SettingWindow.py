@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
+import json
 
 
 class SettingWindow(tk.Toplevel):
-    def __init__(self, parent, settings, stdsettings):
+    def __init__(self, parent, settings, stdsettings, path):
         super().__init__(parent)
         if type(settings) is not dict:
             self.destroy()
@@ -11,7 +12,7 @@ class SettingWindow(tk.Toplevel):
         self.leftframe = leftframe(self, settings.keys())
         self.leftframe.grid(row=0, column=0)
         # todo right frame
-        self.rigthframe = rigthframe(self, settings, stdsettings)
+        self.rigthframe = rigthframe(self, settings, stdsettings, path)
         self.rigthframe.grid(row=0, column=1)
         self.leftframe.setlink(self.rigthframe)
 
@@ -36,14 +37,17 @@ class leftframe(ttk.Frame):
         self.link.setkey(c)
 
 class rigthframe(ttk.Frame):
-    def __init__(self, master, dict, std):
+    def __init__(self, master, dict, std, path):
         super().__init__(master)
         self.data = dict
         self.stdsettings = std
+        self.path = path
 
         self.llist = []
         self.elist = []
         self.stringvars = []
+
+        self.savebutton = ""
 
     def setkey(self, key):
         self.remall()
@@ -61,9 +65,13 @@ class rigthframe(ttk.Frame):
             else:
                 self.elist.append(ttk.Entry(self))
                 self.elist[len(self.elist) - 1].insert("1", self.stdsettings[key][x])
+        z = 0
         for i in range(0, len(self.elist)):
             self.llist[i].grid(row=i, column=0)
             self.elist[i].grid(row=i, column=1)
+            z += 1
+        self.savebutton = ttk.Button(self, text="save", command=lambda : self.save(key))
+        self.savebutton.grid(row=z, column=0)
 
     def remall(self):
         for i in range(0, len(self.elist)):
@@ -71,4 +79,21 @@ class rigthframe(ttk.Frame):
             self.elist[i].destroy()
         self.llist = []
         self.elist = []
+
+    def save(self, key):
+        newdic = self.stdsettings.copy()
+        i = 0
+        countop = 0
+        for x in newdic[key].keys():
+            if type(self.elist[i]) == ttk.OptionMenu:
+                value = self.stringvars[countop].get()
+                countop += 1
+            else:
+                value = self.elist[i].get()
+            newdic[key][x] = value
+            i += 1
+        print(newdic)
+        with open(self.path, "w") as f:
+            f.write(json.dumps(newdic))
+
 

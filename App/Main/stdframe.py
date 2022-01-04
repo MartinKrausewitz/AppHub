@@ -26,5 +26,7 @@ class stdFrame(ttk.Frame):
 
     def getsettingdic(self):
         return dict()
-    def getstdsettingdic(self):
+    def getcurrentsettingdic(self):
         return dict()
+    def getsettingspath(self):
+        return None
