@@ -1,26 +1,31 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import simpledialog
+from tkinter import filedialog as fd
+from tkinter import messagebox as mb
 
 from App.Main import stdframe as st
 from App.Utility import EncryptDecrypt as ED
 from App.Utility import tkinterDisplayKeys as dk
+from App.Utility import settingsloader as sett
+
+import shutil
 import os
 import json
 
-# todo implement language
 # todo add backup
-# todo setting window
 
 class PasswordManagerFrame(st.stdFrame):
     def __init__(self, container):
         super().__init__(container)
         # get app path
         pwddir = os.path.abspath(os.path.join(os.path.dirname("AppHub"), ".."))
-        print(pwddir)
         pwddir = os.path.join(pwddir, "data")
         pwddir = os.path.join(pwddir, "pwmanager")
         self.datadir = pwddir
+        # settingsloader
+        settingsfile = os.path.join(pwddir, "settings.set")
+        self.sl = sett.SettingsLoader(settingsfile, pwddir, "general")
         # look if maintable file exists
         self.initialized = True
         if not os.path.exists(os.path.join(pwddir, "maintable")):
@@ -29,12 +34,15 @@ class PasswordManagerFrame(st.stdFrame):
         self.enc = ED.EncryptDecrypt(pwddir)
         # variables: data stores dict |  topbutton stores topbutton | framearray stores frames
         self.data = ""
-        self.topbutton = []
+        self.topbutton = ""
         self.framearray = []
+        self.allowchange = True
 
         # init style and adding styles
         self.style = ttk.Style()
         self.defstyle()
+
+        self.mainfile = "maintable"
 
         # geometry init
         width = self.winfo_screenwidth()
@@ -50,12 +58,14 @@ class PasswordManagerFrame(st.stdFrame):
 
     # adding the style
     def defstyle(self):
-        self.style.configure("1.TFrame", background="#99A4AA")
-        self.style.configure("1.TLabel", background="#99A4AA")
-        self.style.configure("1.TButton", background="#99A4AA", foreground="#99A4AA")
-        self.style.configure("0.TFrame", background="#99CCCC")
-        self.style.configure("0.TLabel", background="#99CCCC")
-        self.style.configure("0.TButton", background="#99CCCC", foreground="#99CCCC")
+        col1 = self.sl.getbykey("appearance", "col1")
+        col2 = self.sl.getbykey("appearance", "col2")
+        self.style.configure("1.TFrame", background=col1)
+        self.style.configure("1.TLabel", background=col1)
+        self.style.configure("1.TButton", background=col1, foreground=col1)
+        self.style.configure("0.TFrame", background=col2)
+        self.style.configure("0.TLabel", background=col2)
+        self.style.configure("0.TButton", background=col2, foreground=col2)
 
     # initial interaction needed for starting here requests password or setting a new one
     def requestInfo(self):
@@ -65,7 +75,7 @@ class PasswordManagerFrame(st.stdFrame):
         print("start")
         pfalse = True
         while (pfalse):
-            p = simpledialog.askstring("Passwort", "Bitte geben sie ein Passwort ein", show="*")
+            p = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("enterpw"), show="*")
             try:
                 self.enc.setNewKey(p)
             except AttributeError:
@@ -86,8 +96,8 @@ class PasswordManagerFrame(st.stdFrame):
 
     # process for the first setup
     def initprocess(self):
-        p1 = simpledialog.askstring("Passwort", "Bitte geben Sie ein Passwort ein", show="*")
-        p2 = simpledialog.askstring("Passwort", "Bitte geben Sie daselbe Passwort erneut ein", show="*")
+        p1 = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("newpw"), show="*")
+        p2 = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("againpw"), show="*")
         if not p1 == p2:
             self.initprocess()
             return
@@ -103,16 +113,15 @@ class PasswordManagerFrame(st.stdFrame):
         if type(self.data) is not dict:
             return
         # topbuttons actually only the add button
-        self.topbutton.append(ttk.Button(self,text="Passwort hinzufügen", command=self.add))
-        for i in range(0, len(self.topbutton)):
-            self.topbutton[i].grid(row=0, column=i)
+        self.topbutton = TopButtons(self)
+        self.topbutton.grid(row=0, column=0, sticky="w")
         self.displaypwd()
 
     # displays the passwords
     def displaypwd(self):
         firstfree = int(self.data["counter"])
         for i in range(1,firstfree):
-            self.framearray.append(subframe(self.data, i, self, 1000))
+            self.framearray.append(subframe(self.data, i, self, 1000, self.sl))
             self.framearray[i - 1].grid(row=i, column=0)
 
     # displays an item
@@ -120,20 +129,102 @@ class PasswordManagerFrame(st.stdFrame):
         window = dk.keyDisplay(self, self.data[str(id)])
         window.grab_set()
 
+    # make backup
+    def makebac(self):
+        file = fd.asksaveasfilename(defaultextension=".bac")
+        if file is None:
+            return
+
+        p1 = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("newpw"), show="*")
+        p2 = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("againpw"), show="*")
+
+        if p1 is None or p2 is None:
+            return
+
+        if not p1 == p2:
+            self.makebac()
+            return
+        kzw = self.enc.getrawkey()
+        self.enc.setNewKey(p1)
+        d = self.enc.encryptDict(self.data)
+        self.enc.writeFileByPath(file, d[0], d[1], d[2])
+        self.enc.setrawkey(kzw)
+        pass
+
+    # load backup
+    def loadbac(self):
+        file = fd.askopenfilename(defaultextension=".bac")
+        if file is None:
+            return
+        p = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("enterpw"), show="*")
+        if p is None:
+            return
+        self.enc.setNewKey(p)
+        self.data = json.loads(str(self.enc.decrytFileByPath(file),"utf-8"))
+        s = mb.askquestion(self.sl.lanbykey("conf"), self.sl.lanbykey("overorshow"))
+        if s == "yes":
+            self.allowchange = False
+        elif s == "no":
+            self.secbac()
+            self.encdicandsave()
+        else:
+            return
+        self.update()
+
+    # automatic security backup
+    def secbac(self):
+        # find filename
+        src = os.path.join(self.datadir, self.mainfile)
+        basename = "securitybackup"
+        filenamefound = False
+        i = 0
+        while not filenamefound:
+            name = basename + str(i) + ".bac"
+            tmppath = os.path.join(self.datadir, name)
+            if not os.path.exists(tmppath):
+                filenamefound = True
+                shutil.copy(src, tmppath)
+            i = i + 1
+
+    # export to arduino password manager
+    def exptoapm(self):
+        # todo: password
+        # todo: file dialog
+        pass
+
+    def chpw(self):
+        if not self.allowchange:
+            return
+
+        p1 = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("newpw"), show="*")
+        p2 = simpledialog.askstring(self.sl.lanbykey("pw"), self.sl.lanbykey("againpw"), show="*")
+
+        if p1 is None or p2 is None:
+            return
+
+        if not p1 == p2:
+            self.chpw()
+            return
+        self.enc.setNewKey(p1)
+        self.encdicandsave()
+
     # adds an entry to the dictionary
     def add(self):
+        if not self.allowchange:
+            return
+
         firstfree = self.data["counter"]
         entry = dict()
         key = ""
-        keyvalue = simpledialog.askstring("Eintragsname", "Geben sie diesem Eintrag einen Namen:")
+        keyvalue = simpledialog.askstring(self.sl.lanbykey("ename"), self.sl.lanbykey("entryname"))
         if keyvalue is None:
             return
         entry["name"] = keyvalue
         while True:
-            key = simpledialog.askstring("Schlüsselwort", "Geben sie ein Schlüsselwort ein:")
+            key = simpledialog.askstring(self.sl.lanbykey("kword"), self.sl.lanbykey("keyword"))
             if key is None:
                 break
-            keyvalue = simpledialog.askstring("Schlüsselwortwert", "Geben sie ein Wert ein, der ihrem Schlüsselwort zugeordent wird:")
+            keyvalue = simpledialog.askstring(self.sl.lanbykey("kwvalue"), self.sl.lanbykey("keywordvalue"))
             if key is None:
                 continue
             entry[key] = keyvalue
@@ -150,6 +241,9 @@ class PasswordManagerFrame(st.stdFrame):
 
     # removes and entry from the dictionary then encrypts it and saves it
     def removeentry(self, id):
+        if not self.allowchange:
+            return
+
         self.data.pop(str(id))
         for i in range(id, int(self.data["counter"]) - 1):
             self.data[str(i)] = self.data[str(i + 1)]
@@ -184,14 +278,33 @@ class PasswordManagerFrame(st.stdFrame):
 
 
 class subframe(ttk.Frame):
-    def __init__(self, data, i, sup, width):
-        super().__init__(sup, style=str(i%2)+".TFrame")
+    def __init__(self, data, i, master, width, lan):
+        super().__init__(master, style=str(i % 2) + ".TFrame")
         t1 = (int(0.1*width),int(0.3*width))      # padding of Label (right, left)
         t2 = (int(0.05*width),int(0.05*width))    # padding of Button (right, left)
+        t3 = (int(0.05*width),int(1.5*width))    # padding of Button (right, left)
         stylelable = str(i%2)+".TLabel"     # 0.TLabel|1.TLabel
         stylebutton = str(i%2)+".TButton"   # 0.TButton|1.TButton
         noc = 10 #number of characters
         ttk.Label(self, text=data[str(i)]["name"], style=stylelable, width=noc).grid(row=0, column=0, padx=t1)
-        ttk.Button(self, text="Display", command=lambda c=i: sup.displayitem(c), style=stylebutton, width=noc).grid(row=0, column=1, padx=t2)
-        ttk.Button(self, text="Remove", command=lambda c=i: sup.removeentry(c), style=stylebutton, width=noc).grid(row=0, column=2, padx=t2)
+        ttk.Button(self, text=lan.lanbykey("dis"), command=lambda c=i: master.displayitem(c), style=stylebutton, width=noc).grid(row=0, column=1, padx=t2)
+        ttk.Button(self, text=lan.lanbykey("rem"), command=lambda c=i: master.removeentry(c), style=stylebutton, width=noc).grid(row=0, column=2, padx=t3)
+
+class TopButtons(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.topbutton = []
+        # add an entry
+        self.topbutton.append(ttk.Button(self,text=master.sl.lanbykey("addentry"), command=master.add))
+        # make backup
+        self.topbutton.append(ttk.Button(self,text=master.sl.lanbykey("makebac"), command=master.makebac))
+        # load backup
+        self.topbutton.append(ttk.Button(self,text=master.sl.lanbykey("loadbac"), command=master.loadbac))
+        # change password
+        self.topbutton.append(ttk.Button(self,text=master.sl.lanbykey("changepw"), command=master.chpw))
+        # export to arduino password manager
+        self.topbutton.append(ttk.Button(self,text=master.sl.lanbykey("exportapm"), command=master.exptoapm))
+        for i in range(0, len(self.topbutton)):
+            self.topbutton[i].grid(row=0, column=i)
+
 

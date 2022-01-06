@@ -5,8 +5,7 @@ isrunning = True
 language = dict()
 
 # get app path
-pwdir = ""
-pwddir = os.getcwd()
+pwdir = r"C:\Users\david\PycharmProjects\AppHub\data\pwmanager"
 
 while isrunning:
     a = input()

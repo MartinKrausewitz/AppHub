@@ -34,7 +34,10 @@ class EncryptDecrypt():
         return (filesz, IV, outdata)
 
     def writeFile(self, fname, filesz, IV, encdata):
-        with open(os.path.join(self.cryptdir, fname), 'wb') as fwrite:
+        self.writeFileByPath(os.path.join(self.cryptdir, fname), filesz, IV, encdata)
+
+    def writeFileByPath(self, path, filesz, IV, encdata):
+        with open(path, 'wb') as fwrite:
             fwrite.write(filesz)
             fwrite.write(IV)
             fwrite.write(encdata)
@@ -42,8 +45,8 @@ class EncryptDecrypt():
     def setNewKey(self, key):
         self.key = SHA256.new(key.encode('utf-8')).digest()
 
-    def decryptFile(self, file):
-        with open(os.path.join(self.cryptdir, file),'rb') as encfile:
+    def decrytFileByPath(self, path):
+        with open(path,'rb') as encfile:
             filesz = int(str(encfile.read(16), "utf-8"))
             IV = encfile.read(16)
             decrypter = AES.new(self.key, AES.MODE_CFB, IV)
@@ -55,13 +58,21 @@ class EncryptDecrypt():
                 outdata += decrypter.decrypt(temdata)
             outdata = outdata[0:filesz]
             return outdata
-    def decrypt(self):
-        pass
+
+    def decryptFile(self, file):
+        return self.decrytFileByPath(os.path.join(self.cryptdir, file))
+
+    def getrawkey(self):
+        return self.key
+
+    def setrawkey(self, key):
+        self.key = key
+
 
 if __name__ == "__main__":
     pass
-    #encdec = EncryptDecrypt("test")
-    #dict = {"id": "04",
+    # encdec = EncryptDecrypt("test")
+    # dict = {"id": "04",
     #        "1": "0"}
-    #encdec.encrypt(dict)
+    # encdec.encrypt(dict)
     
