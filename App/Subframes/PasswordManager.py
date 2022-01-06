@@ -13,8 +13,6 @@ import shutil
 import os
 import json
 
-# todo add backup
-
 class PasswordManagerFrame(st.stdFrame):
     def __init__(self, container):
         super().__init__(container)
